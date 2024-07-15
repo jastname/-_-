@@ -1,10 +1,12 @@
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 import random
-from PIL import Image, ImageTk  # Pillow 패키지 임포트
+from PIL import Image, ImageTk
+
+Horse_l = ["goldship2.png", "goldship3.png", "goldship.png"]
 
 class Horse:
-    def __init__(self, name, color, min_speed, max_speed, image_path):
+    def __init__(self, name, color, min_speed, max_speed, image_paths):
         self.name = name
         self.color = color
         self.min_speed = min_speed
@@ -13,14 +15,20 @@ class Horse:
         self.shape = None
         self.text_name = None
         self.text_distance = None
+        self.image_index = 0
+        self.images = []
 
-        try:
-            self.image = Image.open(image_path)  # 이미지 로드
-            self.image = self.image.resize((100, 80), Image.Resampling.LANCZOS)  # 이미지 크기 조정
-            self.photo = ImageTk.PhotoImage(self.image)  # PhotoImage 객체 생성
-        except Exception as e:
-            print(f"Error loading image for {name}: {e}")
-            self.photo = None
+        for image_path in image_paths:
+            try:
+                image = Image.open(image_path)  # 이미지 로드
+                image = image.resize((100, 80), Image.Resampling.LANCZOS)  # 이미지 크기 조정
+                photo = ImageTk.PhotoImage(image)  # PhotoImage 객체 생성
+                self.images.append(photo)
+            except Exception as e:
+                print(f"Error loading image for {name}: {e}")
+
+        if not self.images:
+            self.images = [None]
 
         print(f"말 이름: {name}, 색상: {color}, 속도 범위: {min_speed}-{max_speed}")
 
@@ -33,7 +41,7 @@ class HorseApp:
         self.root = root
         self.root.title("경마 게임")
         self.root.option_add("*Font", f"Helvetica {self.FONT_SIZE}")
-        self.canvas = tk.Canvas(root, width=1800, height=600)
+        self.canvas = tk.Canvas(root, width=1200, height=600)  # 캔버스 너비를 1200으로 설정
         self.canvas.pack()
 
         # 경주 매개변수
@@ -41,7 +49,6 @@ class HorseApp:
 
         # 말의 이름과 말의 수
         self.horse_names = ["골드쉽", "키타산 블랙", "토카이 테이오", "맨하탄 카페", "하루 우라라"]
-        self.image_paths = ["goldship.png", "goldship.png", "goldship.png", "goldship.png", "goldship.png"]  # 말 이미지 경로
         self.num_horses = self.ask_num_horses()
 
         self.horses = self.create_horses(self.num_horses)
@@ -84,8 +91,8 @@ class HorseApp:
             name = self.horse_names[i]
             color = colors[i]
             min_speed, max_speed = speed_ranges[i]
-            image_path = self.image_paths[i]
-            horse = Horse(name, color, min_speed, max_speed, image_path)
+            image_paths = Horse_l
+            horse = Horse(name, color, min_speed, max_speed, image_paths)
             horses.append(horse)
         return horses
 
@@ -102,28 +109,36 @@ class HorseApp:
 
         for i, horse in enumerate(self.horses):
             horse.position = 0
-            if horse.photo:
-                horse.shape = self.canvas.create_image(50, i*100+60, image=horse.photo, anchor="nw")
+            y_position = i * 100 + 60
+            horse.image_index = 0  # 초기 이미지 인덱스 설정
+            if horse.images[0]:
+                horse.shape = self.canvas.create_image(50, y_position, image=horse.images[0], anchor="nw")
             else:
-                horse.shape = self.canvas.create_rectangle(50, i*100+20, 150, i*100+100, fill=horse.color)
-            horse.text_name = self.canvas.create_text(75, i*100+15, text=horse.name, anchor="w", font=("Helvetica", 14))
-            horse.text_distance = self.canvas.create_text(400, i*100+75, text="0m", anchor="center", font=("Helvetica", 14))
+                horse.shape = self.canvas.create_rectangle(50, y_position - 40, 150, y_position + 40, fill=horse.color)
+            horse.text_name = self.canvas.create_text(75, y_position, text=horse.name, anchor="w", font=("Helvetica", 14))  # 이름 위치 조정
+            horse.text_distance = self.canvas.create_text(400, y_position, text="0m", anchor="center", font=("Helvetica", 14))
+            
 
         self.update_positions()
 
     def update_positions(self):
         # 승자가 결정될 때까지 말의 위치 업데이트
-        if not any(horse.position + 100 >= self.finish_line for horse in self.horses):
+        if not any(horse.position + 150 >= self.finish_line for horse in self.horses):  # 말의 앞부분이 결승선에 닿으면
             for i, horse in enumerate(self.horses):
-                if horse.position + 100 < self.finish_line:
+                if horse.position + 150 < self.finish_line:  # 말의 앞부분이 결승선에 닿지 않으면
                     if horse.name == self.special_horse:
                         move_distance = random.randint(horse.min_speed + 5, horse.max_speed + 5)  # 이기기 쉬운 말은 더 빠르게 이동
                     else:
                         move_distance = random.randint(horse.min_speed, horse.max_speed)
                     horse.position += move_distance
-                    if horse.position + 100 > self.finish_line:
-                        horse.position = self.finish_line - 100
-                    self.canvas.coords(horse.shape, 50 + horse.position, i*100+60)
+                    if horse.position + 150 > self.finish_line:
+                        horse.position = self.finish_line - 150
+
+                    horse.image_index = (horse.image_index + 1) % len(horse.images)  # 이미지 인덱스 업데이트
+                    y_position = i * 100 + 60
+                    if horse.images[horse.image_index]:
+                        self.canvas.itemconfig(horse.shape, image=horse.images[horse.image_index])
+                    self.canvas.coords(horse.shape, 50 + horse.position, y_position)
                     self.canvas.itemconfig(horse.text_distance, text=f"{horse.position}m")
 
             self.root.after(1000, self.update_positions)
@@ -131,11 +146,12 @@ class HorseApp:
             self.declare_winner()
 
     def declare_winner(self):
-        winner_names = [horse.name for horse in self.horses if horse.position + 100 >= self.finish_line]
-        if len(winner_names) == 1:
-            self.winner_label.config(text=f"우승한 말은 '{winner_names[0]}'입니다!")
+        winner_names = [horse.name for horse in self.horses if horse.position + 150 >= self.finish_line]  # 말의 앞부분이 결승선에 닿으면
+        if len(winner_names) > 1:
+            winner = random.choice(winner_names)
+            self.winner_label.config(text=f"우승한 말은 '{winner}'입니다!")
         else:
-            self.winner_label.config(text=f"우승한 말들은 '{', '.join(winner_names)}'입니다!")
+            self.winner_label.config(text=f"우승한 말은 '{winner_names[0]}'입니다!")
         self.winner_label.place(relx=0.5, rely=0.8, anchor="center")  # 우승자 라벨 위치 조정
         self.start_race_button.config(state=tk.NORMAL)
         self.restart_btn.config(state=tk.NORMAL)
