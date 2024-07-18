@@ -48,7 +48,7 @@ class HorseApp:
         self.finish_line = 1000
 
         # 말의 이름과 말의 수
-        self.horse_names = ["골드쉽", "키타산 블랙", "토카이 테이오", "맨하탄 카페", "하루 우라라"]
+        self.horse_names = ["1번 마", "2번 마", "3번 마", "4번 마", "5번 마"]
         self.num_horses = self.ask_num_horses()
 
         self.horses = self.create_horses(self.num_horses)
@@ -74,7 +74,7 @@ class HorseApp:
     def ask_num_horses(self):
         while True:
             try:
-                num_horses = simpledialog.askinteger("Input", "몇 개의 경마를 입력하시겠습니까? (최대 5개): ")
+                num_horses = simpledialog.askinteger("Input", "몇 마리의 말로 경마를 시작하시겠습니까? (최대 5마리): ")
                 if num_horses is not None and 1 <= num_horses <= 5:
                     return num_horses
                 else:
